@@ -200,5 +200,6 @@ else:
                             st.success("Análise concluída:")
                             st.write(resposta.text)
                             
-                        except Exception as e:
-                            st.error(f"Erro de comunicação com a IA. Verifique se a API Key foi configurada corretamente nos Secrets do Streamlit.")
+                       except Exception as e:
+                            st.error("Erro de comunicação com a IA. Detalhe técnico abaixo:")
+                            st.code(e)

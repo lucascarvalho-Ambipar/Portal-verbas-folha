@@ -181,8 +181,8 @@ else:
                         try:
                             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                             
-                            # Atualizado para a versão mais recente que evita o erro 404
-                            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+                            # Modelo universal (funciona em todas as chaves)
+                            model = genai.GenerativeModel('gemini-pro')
                             
                             prompt = f"""
                             Você é um assistente especialista em folha de pagamento da empresa. 

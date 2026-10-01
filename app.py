@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
-import google.generativeai as genai
 from datetime import datetime
 import io
+import google.generativeai as genai
 
+# Configuração da Página
 st.set_page_config(page_title="Portal de Verbas", page_icon="🟢", layout="wide")
 
 # --- BANCO DE DADOS EM MEMÓRIA ---
@@ -14,7 +15,6 @@ if 'dados_lancamentos' not in st.session_state:
 if 'email_logado' not in st.session_state:
     st.session_state.email_logado = ""
 
-# --- NOVO DICIONÁRIO COM SISTEMA DE TAGS (PARA O ASSISTENTE) ---
 dic_verbas = {
     "Hora Extra 50%": {
         "id": "HE.01", 
@@ -155,41 +155,50 @@ else:
             elif senha != "":
                 st.error("Credenciais incorretas.")
 
-    # --- ABA 3: NOVA CONSULTA INTELIGENTE DE VERBAS ---
+    # --- ABA 3: CONSULTA E ASSISTENTE IA ---
     elif menu == "📖 Consulta de Verbas":
         st.header("Biblioteca & Assistente de Rubricas")
-        st.caption("Consulte o código exato ou descreva a situação para receber uma sugestão.")
+        st.caption("Consulte o código exato ou descreva a situação para a IA sugerir a verba correta.")
         
-        # Cria duas sub-abas: Uma para pesquisa manual, outra para o assistente
-        aba_pesquisa, aba_assistente = st.tabs(["🔍 Pesquisa por Nome/Código", "🤖 Assistente (Descrever Situação)"])
+        aba_pesquisa, aba_assistente = st.tabs(["🔍 Pesquisa por Nome/Código", "✨ Assistente IA (Descrever Situação)"])
         
         with aba_pesquisa:
             st.write("Busque diretamente pelo nome ou ID da verba:")
             termo_busca = st.text_input("Buscar:", placeholder="Ex: HE.01 ou Adicional Noturno", label_visibility="collapsed")
             
-            # Filtro em tempo real
             for nome, dados in dic_verbas.items():
                 if termo_busca.lower() in nome.lower() or termo_busca.lower() in dados["id"].lower():
                     with st.expander(f"**{dados['id']}** - {nome}", expanded=(termo_busca != "")):
                         st.write(f"**Descrição da regra:** {dados['desc']}")
 
         with aba_assistente:
-            st.write("Não sabe qual verba usar? Descreva a situação com as suas palavras e o sistema tentará identificar.")
+            st.write("Não sabe qual verba usar? Descreva a situação com as suas palavras e a Inteligência Artificial fará a análise.")
             duvida = st.text_area("O que você precisa lançar?", placeholder="Ex: O funcionário cobriu um plantão no domingo e ficou até de madrugada.")
             
-            if st.button("Analisar Situação", type="primary"):
+            if st.button("Analisar com IA", type="primary"):
                 if duvida:
-                    sugestoes = []
-                    duvida_formatada = duvida.lower()
-                    
-                    # Varre o dicionário checando se alguma 'tag' está no texto digitado
-                    for nome, dados in dic_verbas.items():
-                        if any(tag in duvida_formatada for tag in dados["tags"]):
-                            sugestoes.append((nome, dados))
-                    
-                    if sugestoes:
-                        st.success("Baseado na sua descrição, sugerimos as seguintes rubricas:")
-                        for nome, dados in sugestoes:
-                            st.info(f"**{dados['id']} - {nome}**: {dados['desc']}")
-                    else:
-                        st.warning("Não encontrei uma correspondência exata. Tente usar palavras como 'domingo', 'madrugada', 'creche' ou procure na aba de pesquisa.")
+                    with st.spinner("Analisando cenário com a IA..."):
+                        try:
+                            # Conecta na API usando a chave secreta guardada no Streamlit
+                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                            
+                            # Usamos o modelo 'flash' pois é extremamente rápido para textos
+                            model = genai.GenerativeModel('gemini-1.5-flash')
+                            
+                            prompt = f"""
+                            Você é um assistente especialista em folha de pagamento da empresa. 
+                            Aqui estão as únicas verbas disponíveis e suas regras: {dic_verbas}.
+                            
+                            Um analista/gestor relatou a seguinte situação: "{duvida}"
+                            
+                            Responda de forma curta, direta e amigável sugerindo a verba correta (Informe o ID e o Nome). 
+                            Justifique rapidamente sua escolha baseada na regra da verba. Se a dúvida não tiver relação com as verbas informadas, peça para o usuário ser mais específico.
+                            """
+                            
+                            resposta = model.generate_content(prompt)
+                            
+                            st.success("Análise concluída:")
+                            st.write(resposta.text)
+                            
+                        except Exception as e:
+                            st.error(f"Erro de comunicação com a IA. Verifique se a API Key foi configurada corretamente nos Secrets do Streamlit.")

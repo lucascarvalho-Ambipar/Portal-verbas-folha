@@ -199,7 +199,6 @@ else:
                             
                             st.success("Análise concluída:")
                             st.write(resposta.text)
-                            
-                       except Exception as e:
+    except Exception as e:
                             st.error("Erro de comunicação com a IA. Detalhe técnico abaixo:")
                             st.code(e)

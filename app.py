@@ -181,8 +181,8 @@ else:
                         try:
                             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                             
-                            # Modelo universal (funciona em todas as chaves)
-                            model = genai.GenerativeModel('gemini-pro')
+                            # O nome exato que o seu cURL validou!
+                            model = genai.GenerativeModel('gemini-flash-latest')
                             
                             prompt = f"""
                             Você é um assistente especialista em folha de pagamento da empresa. 

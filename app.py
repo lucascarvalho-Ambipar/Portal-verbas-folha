@@ -179,10 +179,7 @@ else:
                 if duvida:
                     with st.spinner("Analisando cenário com a IA..."):
                         try:
-                            # Conecta na API usando a chave secreta guardada no Streamlit
                             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                            
-                            # Usamos o modelo 'flash' pois é extremamente rápido para textos
                             model = genai.GenerativeModel('gemini-1.5-flash')
                             
                             prompt = f"""
@@ -199,6 +196,7 @@ else:
                             
                             st.success("Análise concluída:")
                             st.write(resposta.text)
-    except Exception as e:
+                            
+                        except Exception as e:
                             st.error("Erro de comunicação com a IA. Detalhe técnico abaixo:")
                             st.code(e)

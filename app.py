@@ -2,10 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import io
-import smtplib
-from email.message import EmailMessage
 
-# Configuração da Página deve ser a primeira linha
 st.set_page_config(page_title="Portal de Verbas", page_icon="🟢", layout="wide")
 
 # --- BANCO DE DADOS EM MEMÓRIA ---
@@ -16,24 +13,36 @@ if 'dados_lancamentos' not in st.session_state:
 if 'email_logado' not in st.session_state:
     st.session_state.email_logado = ""
 
+# --- NOVO DICIONÁRIO COM SISTEMA DE TAGS (PARA O ASSISTENTE) ---
 dic_verbas = {
-    "Hora Extra 50%": {"id": "HE.01", "desc": "Adiciona o valor de vencimento à folha referente a 50% de hora extra."},
-    "Hora Extra 100%": {"id": "HE.02", "desc": "Adiciona o valor de vencimento à folha referente a 100% de hora extra (Domingos e Feriados)."},
-    "Adicional Noturno": {"id": "AN.01", "desc": "Pagamento de adicional para horas trabalhadas no período noturno."},
-    "Auxílio Creche": {"id": "BE.01", "desc": "Pagamento de benefício para auxílio com dependentes (Apenas Valor)."}
+    "Hora Extra 50%": {
+        "id": "HE.01", 
+        "desc": "Adiciona o valor de vencimento à folha referente a 50% de hora extra.",
+        "tags": ["extra", "50%", "semana", "dia útil", "ficou até mais tarde", "atraso"]
+    },
+    "Hora Extra 100%": {
+        "id": "HE.02", 
+        "desc": "Adiciona o valor de vencimento à folha referente a 100% de hora extra (Domingos e Feriados).",
+        "tags": ["extra", "100%", "domingo", "feriado", "dobrado", "final de semana", "plantão"]
+    },
+    "Adicional Noturno": {
+        "id": "AN.01", 
+        "desc": "Pagamento de adicional para horas trabalhadas no período noturno (das 22h às 05h).",
+        "tags": ["noturno", "noite", "madrugada", "22h", "turno", "dormiu"]
+    },
+    "Auxílio Creche": {
+        "id": "BE.01", 
+        "desc": "Pagamento de benefício para auxílio com dependentes (Apenas Valor).",
+        "tags": ["creche", "filho", "dependente", "escola", "babá", "criança", "reembolso"]
+    }
 }
-
-def enviar_email_confirmacao(destinatario, chapa, verba):
-    # Lógica de e-mail (smtplib) omitida para brevidade
-    return True
 
 # --- TELA DE LOGIN ---
 if st.session_state.email_logado == "":
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.write("")
-        st.write("")
-        st.image("Branco+verde.png", use_container_width=True) # Logo na entrada[cite: 1]
+        st.image("Branco+verde.png", use_container_width=True) 
         st.markdown("<h2 style='text-align: center;'>Portal de Lançamento de Verbas</h2>", unsafe_allow_html=True)
         st.write("---")
         
@@ -47,13 +56,12 @@ if st.session_state.email_logado == "":
 
 # --- SISTEMA PRINCIPAL ---
 else:
-    # --- MENU LATERAL ---
     with st.sidebar:
-        st.image("Branco+verde.png", use_container_width=True) # Logo no menu[cite: 1]
+        st.image("Branco+verde.png", use_container_width=True)
         st.write("---")
         st.markdown(f"**👤 Usuário:**<br>{st.session_state.email_logado}", unsafe_allow_html=True)
         st.write("---")
-        menu = st.radio("Navegação:", ["📝 Fazer Lançamento", "📊 Painel da Folha", "📖 Dicionário de Verbas"])
+        menu = st.radio("Navegação:", ["📝 Fazer Lançamento", "📊 Painel da Folha", "📖 Consulta de Verbas"])
         
         st.write("---")
         if st.button("Sair / Logout", use_container_width=True):
@@ -65,7 +73,7 @@ else:
         st.header("Novo Lançamento de Verba")
         st.caption("Preencha os dados da rubrica. Um relatório de auditoria será enviado ao seu e-mail após a validação.")
         
-        with st.container(border=True): # Cria uma borda elegante ao redor do formulário
+        with st.container(border=True): 
             empresas_teste = ["Solutions", "Response"]
             
             col1, col2 = st.columns(2)
@@ -109,14 +117,13 @@ else:
                     st.session_state.dados_lancamentos = pd.concat([st.session_state.dados_lancamentos, novo_dado], ignore_index=True)
                     
                     st.success(f"✅ Lançamento da rubrica {id_verba} submetido para a chapa {chapa}!")
-                    st.toast("📧 Relatório de auditoria enviado para seu e-mail.", icon="📩")
 
     # --- ABA 2: PAINEL DA FOLHA ---
     elif menu == "📊 Painel da Folha":
         st.header("Painel de Controle - Folha de Pagamento")
         
         with st.container(border=True):
-            senha = st.text_input("Palavra-passe de segurança:", type="password", help="Acesso restrito à diretoria e equipe de folha.")
+            senha = st.text_input("Palavra-passe de segurança:", type="password", help="Acesso restrito.")
             
             if senha == "diretoria2026":
                 st.success("Acesso Autenticado")
@@ -126,14 +133,12 @@ else:
                     st.info("Nenhum lançamento aguardando processamento.")
                 else:
                     st.write("---")
-                    # Abas nativas do Streamlit para um visual muito mais limpo
                     empresas_lancadas = list(df['Empresa'].unique())
                     abas = st.tabs(empresas_lancadas + ["Consolidado Total"])
                     
                     for i, emp in enumerate(empresas_lancadas):
                         with abas[i]:
-                            df_empresa = df[df['Empresa'] == emp]
-                            st.dataframe(df_empresa, use_container_width=True, hide_index=True)
+                            st.dataframe(df[df['Empresa'] == emp], use_container_width=True, hide_index=True)
                             
                     with abas[-1]:
                         st.dataframe(df, use_container_width=True, hide_index=True)
@@ -143,20 +148,47 @@ else:
                             df.to_excel(writer, index=False, sheet_name='Base')
                         
                         st.download_button(
-                            label="📥 Exportar Matriz (Excel)", 
-                            data=buffer.getvalue(), 
-                            file_name="matriz_lancamentos.xlsx", 
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            type="primary"
+                            label="📥 Exportar Matriz (Excel)", data=buffer.getvalue(), 
+                            file_name="matriz_lancamentos.xlsx", type="primary"
                         )
             elif senha != "":
                 st.error("Credenciais incorretas.")
 
-    # --- ABA 3: DICIONÁRIO DE VERBAS ---
-    elif menu == "📖 Dicionário de Verbas":
-        st.header("Biblioteca de Rubricas")
-        st.caption("Consulte as diretrizes e regras de aplicação de cada código.")
+    # --- ABA 3: NOVA CONSULTA INTELIGENTE DE VERBAS ---
+    elif menu == "📖 Consulta de Verbas":
+        st.header("Biblioteca & Assistente de Rubricas")
+        st.caption("Consulte o código exato ou descreva a situação para receber uma sugestão.")
         
-        for nome, dados in dic_verbas.items():
-            with st.expander(f"**{dados['id']}** - {nome}"):
-                st.write(f"**Descrição da regra:** {dados['desc']}")
+        # Cria duas sub-abas: Uma para pesquisa manual, outra para o assistente
+        aba_pesquisa, aba_assistente = st.tabs(["🔍 Pesquisa por Nome/Código", "🤖 Assistente (Descrever Situação)"])
+        
+        with aba_pesquisa:
+            st.write("Busque diretamente pelo nome ou ID da verba:")
+            termo_busca = st.text_input("Buscar:", placeholder="Ex: HE.01 ou Adicional Noturno", label_visibility="collapsed")
+            
+            # Filtro em tempo real
+            for nome, dados in dic_verbas.items():
+                if termo_busca.lower() in nome.lower() or termo_busca.lower() in dados["id"].lower():
+                    with st.expander(f"**{dados['id']}** - {nome}", expanded=(termo_busca != "")):
+                        st.write(f"**Descrição da regra:** {dados['desc']}")
+
+        with aba_assistente:
+            st.write("Não sabe qual verba usar? Descreva a situação com as suas palavras e o sistema tentará identificar.")
+            duvida = st.text_area("O que você precisa lançar?", placeholder="Ex: O funcionário cobriu um plantão no domingo e ficou até de madrugada.")
+            
+            if st.button("Analisar Situação", type="primary"):
+                if duvida:
+                    sugestoes = []
+                    duvida_formatada = duvida.lower()
+                    
+                    # Varre o dicionário checando se alguma 'tag' está no texto digitado
+                    for nome, dados in dic_verbas.items():
+                        if any(tag in duvida_formatada for tag in dados["tags"]):
+                            sugestoes.append((nome, dados))
+                    
+                    if sugestoes:
+                        st.success("Baseado na sua descrição, sugerimos as seguintes rubricas:")
+                        for nome, dados in sugestoes:
+                            st.info(f"**{dados['id']} - {nome}**: {dados['desc']}")
+                    else:
+                        st.warning("Não encontrei uma correspondência exata. Tente usar palavras como 'domingo', 'madrugada', 'creche' ou procure na aba de pesquisa.")
